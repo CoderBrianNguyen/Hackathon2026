@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { CheckCircle, XCircle } from "lucide-react";
-import { Deck, Flashcard, QuizResult } from "@/lib/types";
+import { Deck, Flashcard, QuizAnswer, QuizResult } from "@/lib/types";
 
 interface QuizModeProps {
   deck: Deck;
@@ -16,26 +16,30 @@ export function QuizMode({ deck, onBack, onFinish }: QuizModeProps) {
   const [showAnswer, setShowAnswer] = useState(false);
   const [correctCount, setCorrectCount] = useState(0);
   const [missedCards, setMissedCards] = useState<Flashcard[]>([]);
+  const [answers, setAnswers] = useState<QuizAnswer[]>([]);
+  const [confidence, setConfidence] = useState<1 | 2 | 3 | undefined>(undefined);
 
   const currentCard = deck.cards[index];
   const progressPercent = useMemo(() => ((index + 1) / deck.cards.length) * 100, [index, deck.cards.length]);
 
   const handleSelfGrade = (isCorrect: boolean) => {
-    if (isCorrect) {
-      setCorrectCount((prev) => prev + 1);
-    } else {
-      setMissedCards((prev) => [...prev, currentCard]);
-    }
+    const nextCorrectCount = isCorrect ? correctCount + 1 : correctCount;
+    const nextMissedCards = isCorrect ? missedCards : [...missedCards, currentCard];
+    const nextAnswers: QuizAnswer[] = [...answers, { cardId: currentCard.id, isCorrect, confidence }];
+
+    setCorrectCount(nextCorrectCount);
+    setMissedCards(nextMissedCards);
+    setAnswers(nextAnswers);
 
     const isLastCard = index >= deck.cards.length - 1;
     if (isLastCard) {
-      const correct = isCorrect ? correctCount + 1 : correctCount;
       onFinish({
         deckId: deck.id,
         total: deck.cards.length,
-        correct,
-        incorrect: deck.cards.length - correct,
-        missedCards: isCorrect ? missedCards : [...missedCards, currentCard],
+        correct: nextCorrectCount,
+        incorrect: deck.cards.length - nextCorrectCount,
+        answers: nextAnswers,
+        missedCards: nextMissedCards,
         completedAt: new Date().toISOString()
       });
       return;
@@ -44,6 +48,7 @@ export function QuizMode({ deck, onBack, onFinish }: QuizModeProps) {
     setIndex((prev) => prev + 1);
     setTypedAnswer("");
     setShowAnswer(false);
+    setConfidence(undefined);
   };
 
   if (deck.cards.length === 0) {
@@ -90,6 +95,39 @@ export function QuizMode({ deck, onBack, onFinish }: QuizModeProps) {
             <div className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800 ring-1 ring-emerald-100">
               <p className="font-semibold">Answer</p>
               <p>{currentCard.back}</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-medium text-slate-600">Confidence:</span>
+              <button
+                onClick={() => setConfidence(1)}
+                className={`rounded-md px-2.5 py-1 text-xs font-medium ${
+                  confidence === 1
+                    ? "bg-amber-600 text-white"
+                    : "bg-amber-50 text-amber-700 ring-1 ring-amber-200 hover:bg-amber-100"
+                }`}
+              >
+                Not sure
+              </button>
+              <button
+                onClick={() => setConfidence(2)}
+                className={`rounded-md px-2.5 py-1 text-xs font-medium ${
+                  confidence === 2
+                    ? "bg-sky-600 text-white"
+                    : "bg-sky-50 text-sky-700 ring-1 ring-sky-200 hover:bg-sky-100"
+                }`}
+              >
+                Somewhat sure
+              </button>
+              <button
+                onClick={() => setConfidence(3)}
+                className={`rounded-md px-2.5 py-1 text-xs font-medium ${
+                  confidence === 3
+                    ? "bg-emerald-600 text-white"
+                    : "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100"
+                }`}
+              >
+                Very sure
+              </button>
             </div>
             <div className="flex gap-2">
               <button

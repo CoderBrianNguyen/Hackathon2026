@@ -13,37 +13,61 @@ interface QuizModeProps {
 export function QuizMode({ deck, onBack, onFinish }: QuizModeProps) {
   const [index, setIndex] = useState(0);
   const [typedAnswer, setTypedAnswer] = useState("");
-  const [showAnswer, setShowAnswer] = useState(false);
   const [correctCount, setCorrectCount] = useState(0);
   const [missedCards, setMissedCards] = useState<Flashcard[]>([]);
+  const [submittedResult, setSubmittedResult] = useState<boolean | null>(null);
+  const [confidence, setConfidence] = useState<"not_sure" | "somewhat_sure" | "very_sure" | null>(null);
+  const [confidenceScores, setConfidenceScores] = useState<number[]>([]);
 
   const currentCard = deck.cards[index];
   const progressPercent = useMemo(() => ((index + 1) / deck.cards.length) * 100, [index, deck.cards.length]);
 
-  const handleSelfGrade = (isCorrect: boolean) => {
-    if (isCorrect) {
-      setCorrectCount((prev) => prev + 1);
-    } else {
-      setMissedCards((prev) => [...prev, currentCard]);
-    }
+  const normalizeAnswer = (answer: string) => answer.replace(/\s+/g, "").toLowerCase();
+  const confidenceToScore = (value: "not_sure" | "somewhat_sure" | "very_sure" | null) => {
+    if (value === "not_sure") return 33;
+    if (value === "somewhat_sure") return 67;
+    if (value === "very_sure") return 100;
+    return null;
+  };
+
+  const advanceQuiz = (isCorrect: boolean) => {
+    const updatedCorrect = isCorrect ? correctCount + 1 : correctCount;
+    const updatedMissedCards = isCorrect ? missedCards : [...missedCards, currentCard];
+    const currentConfidenceScore = confidenceToScore(confidence);
+    const updatedConfidenceScores =
+      currentConfidenceScore === null ? confidenceScores : [...confidenceScores, currentConfidenceScore];
+    const averageConfidence =
+      updatedConfidenceScores.length > 0
+        ? Math.round(updatedConfidenceScores.reduce((total, score) => total + score, 0) / updatedConfidenceScores.length)
+        : null;
 
     const isLastCard = index >= deck.cards.length - 1;
     if (isLastCard) {
-      const correct = isCorrect ? correctCount + 1 : correctCount;
       onFinish({
         deckId: deck.id,
         total: deck.cards.length,
-        correct,
-        incorrect: deck.cards.length - correct,
-        missedCards: isCorrect ? missedCards : [...missedCards, currentCard],
-        completedAt: new Date().toISOString()
+        correct: updatedCorrect,
+        incorrect: deck.cards.length - updatedCorrect,
+        missedCards: updatedMissedCards,
+        completedAt: new Date().toISOString(),
+        averageConfidence
       });
       return;
     }
 
+    setCorrectCount(updatedCorrect);
+    setMissedCards(updatedMissedCards);
+    setConfidenceScores(updatedConfidenceScores);
     setIndex((prev) => prev + 1);
     setTypedAnswer("");
-    setShowAnswer(false);
+    setSubmittedResult(null);
+    setConfidence(null);
+  };
+
+  const handleSubmitAnswer = () => {
+    if (submittedResult !== null) return;
+    const isCorrect = normalizeAnswer(typedAnswer) === normalizeAnswer(currentCard.back);
+    setSubmittedResult(isCorrect);
   };
 
   if (deck.cards.length === 0) {
@@ -76,37 +100,82 @@ export function QuizMode({ deck, onBack, onFinish }: QuizModeProps) {
           onChange={(event) => setTypedAnswer(event.target.value)}
           placeholder="Type your answer here..."
           className="mt-4 h-24 w-full rounded-lg border border-slate-300 p-3 text-sm"
+          disabled={submittedResult !== null}
         />
 
-        {!showAnswer ? (
-          <button
-            onClick={() => setShowAnswer(true)}
-            className="mt-3 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500"
-          >
-            Show Answer
-          </button>
+        {submittedResult === null ? (
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <button
+              onClick={handleSubmitAnswer}
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500"
+            >
+              Submit Answer
+            </button>
+
+            <span className="h-8 w-px bg-slate-300" aria-hidden />
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setConfidence("not_sure")}
+                className={`rounded-lg border px-3 py-2 text-sm font-medium ${
+                  confidence === "not_sure"
+                    ? "border-amber-200 bg-amber-50 text-amber-700"
+                    : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                Not sure
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfidence("somewhat_sure")}
+                className={`rounded-lg border px-3 py-2 text-sm font-medium ${
+                  confidence === "somewhat_sure"
+                    ? "border-sky-200 bg-sky-50 text-sky-700"
+                    : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                Somewhat sure
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfidence("very_sure")}
+                className={`rounded-lg border px-3 py-2 text-sm font-medium ${
+                  confidence === "very_sure"
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                    : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                Very sure
+              </button>
+            </div>
+          </div>
         ) : (
           <div className="mt-4 space-y-3">
-            <div className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800 ring-1 ring-emerald-100">
-              <p className="font-semibold">Answer</p>
-              <p>{currentCard.back}</p>
+            <div
+              className={`rounded-lg p-3 text-sm ring-1 ${
+                submittedResult ? "bg-emerald-50 text-emerald-800 ring-emerald-100" : "bg-rose-50 text-rose-800 ring-rose-100"
+              }`}
+            >
+              <p className="font-semibold">{submittedResult ? "Correct" : "Incorrect"}</p>
+              <p>
+                Your answer: <span className="font-medium">{typedAnswer.trim() || "No answer provided"}</span>
+              </p>
+              {!submittedResult && (
+                <p>
+                  Expected answer: <span className="font-medium">{currentCard.back}</span>
+                </p>
+              )}
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleSelfGrade(true)}
-                className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500"
-              >
-                <CheckCircle size={16} />
-                Correct
-              </button>
-              <button
-                onClick={() => handleSelfGrade(false)}
-                className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-500"
-              >
-                <XCircle size={16} />
-                Incorrect
-              </button>
-            </div>
+            <button
+              onClick={() => advanceQuiz(submittedResult)}
+              className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white ${
+                submittedResult ? "bg-emerald-600 hover:bg-emerald-500" : "bg-rose-600 hover:bg-rose-500"
+              }`}
+            >
+              {submittedResult ? <CheckCircle size={16} /> : <XCircle size={16} />}
+              {index >= deck.cards.length - 1 ? "Finish Quiz" : "Next Card"}
+            </button>
           </div>
         )}
       </article>

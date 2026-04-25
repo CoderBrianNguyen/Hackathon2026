@@ -1,18 +1,19 @@
 "use client";
 
 import { Plus, RotateCcw, Trash2 } from "lucide-react";
-import { Deck, Difficulty, Flashcard } from "@/lib/types";
+import { Deck, Difficulty, Flashcard, Subject } from "@/lib/types";
 import { AIGenerationPanel } from "./AIGenerationPanel";
 
 interface FlashcardEditorProps {
   deck: Deck;
+  subjects: Subject[];
   onBack: () => void;
   onSave: (deck: Deck) => void;
 }
 
 const difficultyOptions: Difficulty[] = ["Easy", "Medium", "Hard"];
 
-export function FlashcardEditor({ deck, onBack, onSave }: FlashcardEditorProps) {
+export function FlashcardEditor({ deck, subjects, onBack, onSave }: FlashcardEditorProps) {
   const updateCard = (cardId: string, patch: Partial<Flashcard>) => {
     const updatedCards = deck.cards.map((card) => (card.id === cardId ? { ...card, ...patch } : card));
     onSave({ ...deck, cards: updatedCards });
@@ -49,6 +50,25 @@ export function FlashcardEditor({ deck, onBack, onSave }: FlashcardEditorProps) 
           </button>
         </div>
       </header>
+
+      <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+        <label htmlFor="deck-subject-editor" className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          Subject Assignment
+        </label>
+        <select
+          id="deck-subject-editor"
+          value={deck.subjectId ?? "none"}
+          onChange={(event) => onSave({ ...deck, subjectId: event.target.value === "none" ? null : event.target.value })}
+          className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700"
+        >
+          <option value="none">Unassigned</option>
+          {subjects.map((subject) => (
+            <option key={subject.id} value={subject.id}>
+              {subject.name}
+            </option>
+          ))}
+        </select>
+      </div>
 
       <AIGenerationPanel onApproveCards={(cards) => onSave({ ...deck, cards: [...deck.cards, ...cards] })} />
 

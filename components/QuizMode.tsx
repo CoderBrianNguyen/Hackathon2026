@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { CheckCircle, XCircle } from "lucide-react";
-import { Deck, Flashcard, QuizResult } from "@/lib/types";
+import { Deck, Flashcard, QuizAnswer, QuizResult } from "@/lib/types";
 
 interface QuizModeProps {
   deck: Deck;

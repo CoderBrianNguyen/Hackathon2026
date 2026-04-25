@@ -3,43 +3,52 @@
 import { useMemo, useState } from "react";
 import { CheckCircle, Sparkles } from "lucide-react";
 import { Flashcard } from "@/lib/types";
+import { mockGenerateCards } from "@/lib/ai";
 
 interface AIGenerationPanelProps {
   onApproveCards: (cards: Flashcard[]) => void;
 }
 
-const mockGenerateCards = (notes: string): Flashcard[] => {
-  // TODO: Replace mock generation with a Gemini/OpenAI API call for real note-to-card generation.
-  const snippets = notes
-    .split(/[.\n]/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .slice(0, 5);
-
-  if (snippets.length === 0) {
-    return [
-      {
-        id: crypto.randomUUID(),
-        front: "What is one key idea from your notes?",
-        back: "Add notes with clear facts so cards can be generated.",
-        difficulty: "Medium"
-      }
-    ];
-  }
-
-  return snippets.map((line, index) => ({
-    id: crypto.randomUUID(),
-    front: `Explain this concept: ${line.slice(0, 60)}${line.length > 60 ? "..." : ""}`,
-    back: line,
-    difficulty: index % 3 === 0 ? "Easy" : index % 3 === 1 ? "Medium" : "Hard"
-  }));
-};
-
 export function AIGenerationPanel({ onApproveCards }: AIGenerationPanelProps) {
   const [notes, setNotes] = useState("");
   const [generated, setGenerated] = useState<Flashcard[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   const canGenerate = useMemo(() => notes.trim().length > 10, [notes]);
+
+  const generateCards = async () => {
+    setStatusMessage(null);
+    setIsLoading(true);
+
+    try {
+      const response = await fetch("/api/gemini", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notes })
+      });
+
+      const data = await response.json();
+      if (!response.ok || !Array.isArray(data.cards)) {
+        throw new Error(data?.message || "Failed to generate cards.");
+      }
+
+      setGenerated(data.cards);
+      if (data.fallback) {
+        setStatusMessage("Generated cards using fallback mock content.");
+      }
+    } catch (error) {
+      const fallbackCards = mockGenerateCards(notes);
+      setGenerated(fallbackCards);
+      setStatusMessage(
+        error instanceof Error
+          ? `Gemini unavailable: ${error.message}. Showing mock cards instead.`
+          : "Gemini unavailable; showing mock cards instead."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-4">
@@ -55,12 +64,14 @@ export function AIGenerationPanel({ onApproveCards }: AIGenerationPanelProps) {
         placeholder="Paste class notes or bullet points..."
       />
       <button
-        onClick={() => setGenerated(mockGenerateCards(notes))}
-        disabled={!canGenerate}
+        onClick={generateCards}
+        disabled={!canGenerate || isLoading}
         className="mt-3 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-indigo-300"
       >
-        Generate Flashcards
+        {isLoading ? "Generating..." : "Generate Flashcards"}
       </button>
+
+      {statusMessage && <p className="mt-2 text-sm text-slate-600">{statusMessage}</p>}
 
       {generated.length > 0 && (
         <div className="mt-4 space-y-2">

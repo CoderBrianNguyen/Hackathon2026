@@ -3,7 +3,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { mockGenerateCards } from "@/lib/ai";
 import { Flashcard } from "@/lib/types";
 
-const GEMINI_MODEL = "gemini-1.0";
+const GEMINI_MODEL = "gemini-2.5-flash";
 
 interface GeminiApiRequest {
   notes?: string;

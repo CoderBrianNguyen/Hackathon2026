@@ -125,7 +125,7 @@ export default function HomePage() {
   const reviewMissedCards = () => {
     if (!latestResult || !activeDeck) return;
     const cardById = new Map(activeDeck.cards.map((card) => [card.id, card]));
-    const lowConfidenceCards = latestResult.answers
+    const lowConfidenceCards = (latestResult.answers ?? [])
       .filter((answer) => !answer.isCorrect || (answer.isCorrect && answer.confidence === 1))
       .map((answer) => cardById.get(answer.cardId))
       .filter((card): card is Deck["cards"][number] => Boolean(card));

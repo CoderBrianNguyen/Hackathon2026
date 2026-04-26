@@ -13,7 +13,7 @@ interface GeminiCard {
   difficulty?: unknown;
 }
 
-const GEMINI_MODEL = "gemini-2.0-flash";
+const GEMINI_MODEL = "gemini-2.5-flash";
 
 const fallbackFromNotes = (notes: string): Flashcard[] => mockGenerateCards(notes);
 
@@ -35,8 +35,8 @@ const toFlashcard = (item: GeminiCard): Flashcard | null => {
 
   return {
     id: crypto.randomUUID(),
-    front: question,
-    back: hint ? `${answer}\n\nHint: ${hint}` : answer,
+    front: hint ? `${question}\n(Hint: ${hint})` : question,
+    back: answer,
     difficulty: toDifficulty(item.difficulty)
   };
 };

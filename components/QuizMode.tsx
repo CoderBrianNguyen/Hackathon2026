@@ -10,6 +10,16 @@ interface QuizModeProps {
   onFinish: (result: QuizResult) => void;
 }
 
+const shuffleDeck = <T,>(array: T[]): T[] => {
+  const temp = [...array];
+  const shuffled = [];
+  while (temp != 0) {
+    const index = Math.floor(Math.random() * (temp.length + 1));
+    shuffled.push(temp.splice(index,1));
+    }
+  return shuffled.flat();
+  }
+
 export function QuizMode({ deck, onBack, onFinish }: QuizModeProps) {
   const [index, setIndex] = useState(0);
   const [typedAnswer, setTypedAnswer] = useState("");
@@ -18,9 +28,11 @@ export function QuizMode({ deck, onBack, onFinish }: QuizModeProps) {
   const [submittedResult, setSubmittedResult] = useState<boolean | null>(null);
   const [confidence, setConfidence] = useState<"not_sure" | "somewhat_sure" | "very_sure" | null>(null);
   const [confidenceScores, setConfidenceScores] = useState<number[]>([]);
+  const [answers, setAnswers] = useState<QuizAnswer[]>([]);
 
-  const currentCard = deck.cards[index];
-  const progressPercent = useMemo(() => ((index + 1) / deck.cards.length) * 100, [index, deck.cards.length]);
+  const shuffledCards = useMemo(() => shuffleDeck(deck.cards), [deck.id]);
+  const currentCard = shuffledCards[index];
+  const progressPercent = useMemo(() => ((index + 1) / shuffledCards.length) * 100, [index, shuffledCards.length]);
 
   const normalizeAnswer = (answer: string) => answer.replace(/\s+/g, "").toLowerCase();
   const confidenceToScore = (value: "not_sure" | "somewhat_sure" | "very_sure" | null) => {
@@ -40,6 +52,13 @@ export function QuizMode({ deck, onBack, onFinish }: QuizModeProps) {
       updatedConfidenceScores.length > 0
         ? Math.round(updatedConfidenceScores.reduce((total, score) => total + score, 0) / updatedConfidenceScores.length)
         : null;
+    const confidenceValue = confidence === "not_sure" ? 1 : confidence === "somewhat_sure" ? 2 : confidence === "very_sure" ? 3 : undefined;
+    const answer: QuizAnswer = {
+      cardId: currentCard.id,
+      isCorrect,
+      ...(confidenceValue ? { confidence: confidenceValue } : {})
+    };
+    const updatedAnswers = [...answers, answer];
 
     const isLastCard = index >= deck.cards.length - 1;
     if (isLastCard) {
@@ -48,6 +67,7 @@ export function QuizMode({ deck, onBack, onFinish }: QuizModeProps) {
         total: deck.cards.length,
         correct: updatedCorrect,
         incorrect: deck.cards.length - updatedCorrect,
+        answers: updatedAnswers,
         missedCards: updatedMissedCards,
         completedAt: new Date().toISOString(),
         averageConfidence
@@ -58,6 +78,7 @@ export function QuizMode({ deck, onBack, onFinish }: QuizModeProps) {
     setCorrectCount(updatedCorrect);
     setMissedCards(updatedMissedCards);
     setConfidenceScores(updatedConfidenceScores);
+    setAnswers(updatedAnswers);
     setIndex((prev) => prev + 1);
     setTypedAnswer("");
     setSubmittedResult(null);

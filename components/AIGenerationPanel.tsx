@@ -35,7 +35,11 @@ export function AIGenerationPanel({ onApproveCards }: AIGenerationPanelProps) {
 
       setGenerated(data.cards);
       if (data.fallback) {
-        setStatusMessage("Generated cards using fallback mock content.");
+        setStatusMessage(
+          typeof data.message === "string" && data.message.trim().length > 0
+            ? data.message
+            : "Generated cards using fallback mock content."
+        );
       }
     } catch (error) {
       const fallbackCards = mockGenerateCards(notes);

@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {};
-
+const nextConfig = {
+    productionBrowserSourceMaps: false,
+    turbopack: {},
+}
 export default nextConfig;

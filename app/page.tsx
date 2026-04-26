@@ -5,9 +5,17 @@ import { Dashboard } from "@/components/Dashboard";
 import { FlashcardEditor } from "@/components/FlashcardEditor";
 import { QuizMode } from "@/components/QuizMode";
 import { ResultsView } from "@/components/ResultsView";
+import { EvaluateShortAnswersView } from "@/components/EvaluateShortAnswersView";
 import { AppView, Deck, QuizResult, StudyPlan, Subject } from "@/lib/types";
 import { loadAppData, saveAppData } from "@/lib/storage";
 import { DEFAULT_SUBJECT_COLOR, normalizeSubjectColor } from "@/lib/subjectColor";
+
+interface ShortAnswer {
+  cardId: string;
+  question: string;
+  studentAnswer: string;
+  expectedAnswer: string;
+}
 
 export default function HomePage() {
   const [isHydrated, setIsHydrated] = useState(false);
@@ -17,6 +25,7 @@ export default function HomePage() {
   const [activeDeckId, setActiveDeckId] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<AppView>("dashboard");
   const [latestResult, setLatestResult] = useState<QuizResult | null>(null);
+  const [shortAnswersForEvaluation, setShortAnswersForEvaluation] = useState<ShortAnswer[]>([]);
 
   useEffect(() => {
     const localData = loadAppData();
@@ -119,7 +128,14 @@ export default function HomePage() {
           : deck
       )
     );
-    setActiveView("results");
+
+    // Check if there are short answers to evaluate
+    if ((result as any).shortAnswersForEvaluation && (result as any).shortAnswersForEvaluation.length > 0) {
+      setShortAnswersForEvaluation((result as any).shortAnswersForEvaluation);
+      setActiveView("evaluate-short-answers");
+    } else {
+      setActiveView("results");
+    }
   };
 
   const reviewMissedCards = () => {
@@ -146,6 +162,12 @@ export default function HomePage() {
     setDecks((prev) => [reviewDeck, ...prev]);
     setActiveDeckId(reviewDeck.id);
     setActiveView("quiz");
+  };
+
+  const handleEvaluationComplete = (evaluatedResult: QuizResult) => {
+    setLatestResult(evaluatedResult);
+    setShortAnswersForEvaluation([]);
+    setActiveView("results");
   };
 
   if (!isHydrated) {
@@ -187,6 +209,16 @@ export default function HomePage() {
           deck={activeDeck}
           onFinish={finishQuiz}
           onBack={() => setActiveView("dashboard")}
+        />
+      )}
+
+      {activeView === "evaluate-short-answers" && latestResult && activeDeck && shortAnswersForEvaluation.length > 0 && (
+        <EvaluateShortAnswersView
+          result={latestResult}
+          shortAnswers={shortAnswersForEvaluation}
+          deck={activeDeck}
+          onEvaluated={handleEvaluationComplete}
+          onBackToDashboard={() => setActiveView("dashboard")}
         />
       )}
 

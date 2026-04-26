@@ -52,6 +52,14 @@ export interface QuizAnswer {
   cardId: string;
   isCorrect: boolean;
   confidence?: 1 | 2 | 3;
+  userAnswer?: string;
+}
+
+export interface AnswerEvaluation {
+  cardId: string;
+  isCorrect: boolean;
+  confidence: number;
+  feedback: string;
 }
 
 export interface QuizResult {
@@ -63,6 +71,7 @@ export interface QuizResult {
   missedCards: Flashcard[];
   completedAt: string;
   averageConfidence: number | null;
+  evaluations?: AnswerEvaluation[];
 }
 
-export type AppView = "dashboard" | "editor" | "quiz" | "results";
+export type AppView = "dashboard" | "editor" | "quiz" | "evaluate-short-answers" | "results";

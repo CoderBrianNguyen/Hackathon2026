@@ -1,8 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CheckCircle, XCircle } from "lucide-react";
+import { CheckCircle, XCircle, Clock } from "lucide-react";
 import { Deck, Flashcard, QuizAnswer, QuizResult } from "@/lib/types";
+
+interface ShortAnswer {
+  cardId: string;
+  question: string;
+  studentAnswer: string;
+  expectedAnswer: string;
+}
 
 interface QuizModeProps {
   deck: Deck;
@@ -13,12 +20,12 @@ interface QuizModeProps {
 const shuffleDeck = <T,>(array: T[]): T[] => {
   const temp = [...array];
   const shuffled = [];
-  while (temp != 0) {
-    const index = Math.floor(Math.random() * (temp.length + 1));
-    shuffled.push(temp.splice(index,1));
-    }
-  return shuffled.flat();
+  while (temp.length > 0) {
+    const index = Math.floor(Math.random() * temp.length);
+    shuffled.push(...temp.splice(index, 1));
   }
+  return shuffled;
+};
 
 export function QuizMode({ deck, onBack, onFinish }: QuizModeProps) {
   const [index, setIndex] = useState(0);
@@ -29,6 +36,7 @@ export function QuizMode({ deck, onBack, onFinish }: QuizModeProps) {
   const [confidence, setConfidence] = useState<"not_sure" | "somewhat_sure" | "very_sure" | null>(null);
   const [confidenceScores, setConfidenceScores] = useState<number[]>([]);
   const [answers, setAnswers] = useState<QuizAnswer[]>([]);
+  const [shortAnswers, setShortAnswers] = useState<ShortAnswer[]>([]);
 
   const shuffledCards = useMemo(() => shuffleDeck(deck.cards), [deck.id]);
   const currentCard = shuffledCards[index];
@@ -42,9 +50,31 @@ export function QuizMode({ deck, onBack, onFinish }: QuizModeProps) {
     return null;
   };
 
-  const advanceQuiz = (isCorrect: boolean) => {
-    const updatedCorrect = isCorrect ? correctCount + 1 : correctCount;
-    const updatedMissedCards = isCorrect ? missedCards : [...missedCards, currentCard];
+  const handleSubmitAnswer = () => {
+    if (submittedResult !== null) return;
+
+    const wordCount = typedAnswer.trim().split(/\s+/).length;
+
+    if (wordCount > 3) {
+      // For complex answers, defer evaluation to results page
+      setSubmittedResult(null); // Mark as neither correct nor incorrect yet
+      setShortAnswers([...shortAnswers, {
+        cardId: currentCard.id,
+        question: currentCard.front,
+        studentAnswer: typedAnswer,
+        expectedAnswer: currentCard.back
+      }]);
+    } else {
+      // For short answers, use simple matching immediately
+      const isCorrect = normalizeAnswer(typedAnswer) === normalizeAnswer(currentCard.back);
+      setSubmittedResult(isCorrect);
+    }
+  };
+
+  const advanceQuiz = (isCorrect: boolean | null) => {
+    // isCorrect can be null for deferred evaluation answers
+    const updatedCorrect = isCorrect === true ? correctCount + 1 : correctCount;
+    const updatedMissedCards = isCorrect === false ? [...missedCards, currentCard] : missedCards;
     const currentConfidenceScore = confidenceToScore(confidence);
     const updatedConfidenceScores =
       currentConfidenceScore === null ? confidenceScores : [...confidenceScores, currentConfidenceScore];
@@ -55,7 +85,8 @@ export function QuizMode({ deck, onBack, onFinish }: QuizModeProps) {
     const confidenceValue = confidence === "not_sure" ? 1 : confidence === "somewhat_sure" ? 2 : confidence === "very_sure" ? 3 : undefined;
     const answer: QuizAnswer = {
       cardId: currentCard.id,
-      isCorrect,
+      isCorrect: isCorrect ?? false, // Use false as placeholder for deferred evaluation
+      userAnswer: typedAnswer,
       ...(confidenceValue ? { confidence: confidenceValue } : {})
     };
     const updatedAnswers = [...answers, answer];
@@ -70,8 +101,9 @@ export function QuizMode({ deck, onBack, onFinish }: QuizModeProps) {
         answers: updatedAnswers,
         missedCards: updatedMissedCards,
         completedAt: new Date().toISOString(),
-        averageConfidence
-      });
+        averageConfidence,
+        shortAnswersForEvaluation: shortAnswers.length > 0 ? shortAnswers : undefined
+      } as any);
       return;
     }
 
@@ -83,12 +115,6 @@ export function QuizMode({ deck, onBack, onFinish }: QuizModeProps) {
     setTypedAnswer("");
     setSubmittedResult(null);
     setConfidence(null);
-  };
-
-  const handleSubmitAnswer = () => {
-    if (submittedResult !== null) return;
-    const isCorrect = normalizeAnswer(typedAnswer) === normalizeAnswer(currentCard.back);
-    setSubmittedResult(isCorrect);
   };
 
   if (deck.cards.length === 0) {
@@ -175,26 +201,46 @@ export function QuizMode({ deck, onBack, onFinish }: QuizModeProps) {
           <div className="mt-4 space-y-3">
             <div
               className={`rounded-lg p-3 text-sm ring-1 ${
-                submittedResult ? "bg-emerald-50 text-emerald-800 ring-emerald-100" : "bg-rose-50 text-rose-800 ring-rose-100"
+                submittedResult === true
+                  ? "bg-emerald-50 text-emerald-800 ring-emerald-100"
+                  : submittedResult === false
+                  ? "bg-rose-50 text-rose-800 ring-rose-100"
+                  : "bg-blue-50 text-blue-800 ring-blue-100"
               }`}
             >
-              <p className="font-semibold">{submittedResult ? "Correct" : "Incorrect"}</p>
+              {submittedResult === true && <p className="font-semibold">Correct</p>}
+              {submittedResult === false && <p className="font-semibold">Incorrect</p>}
+              {submittedResult === null && (
+                <div className="flex items-center gap-2">
+                  <Clock size={16} />
+                  <p className="font-semibold">Pending Evaluation</p>
+                </div>
+              )}
               <p>
                 Your answer: <span className="font-medium">{typedAnswer.trim() || "No answer provided"}</span>
               </p>
-              {!submittedResult && (
+              {submittedResult === false && (
                 <p>
                   Expected answer: <span className="font-medium">{currentCard.back}</span>
                 </p>
+              )}
+              {submittedResult === null && (
+                <p className="mt-2 text-xs opacity-75">This answer will be evaluated after you complete the quiz.</p>
               )}
             </div>
             <button
               onClick={() => advanceQuiz(submittedResult)}
               className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white ${
-                submittedResult ? "bg-emerald-600 hover:bg-emerald-500" : "bg-rose-600 hover:bg-rose-500"
+                submittedResult === true
+                  ? "bg-emerald-600 hover:bg-emerald-500"
+                  : submittedResult === false
+                  ? "bg-rose-600 hover:bg-rose-500"
+                  : "bg-blue-600 hover:bg-blue-500"
               }`}
             >
-              {submittedResult ? <CheckCircle size={16} /> : <XCircle size={16} />}
+              {submittedResult === true && <CheckCircle size={16} />}
+              {submittedResult === false && <XCircle size={16} />}
+              {submittedResult === null && <Clock size={16} />}
               {index >= deck.cards.length - 1 ? "Finish Quiz" : "Next Card"}
             </button>
           </div>

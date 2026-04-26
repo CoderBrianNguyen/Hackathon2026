@@ -1,12 +1,36 @@
-# Hackathon2026
-BroncoHacks
+# RecallRush
 
-**RecallRush:**
-Fast active-recall study sprints with instant feedback
+Fast active-recall study sprints with instant feedback.
 
-- Create flashcard decks for different topics & subjects (manually or AI-generated cards)
-- Quizzes based on a deck that records recent, average, & best scores, and confidence level
-- Calendar to schedule quizzes for subjects across weeks & months
+## Team Members:
+Nathan Le, Brian Nguyen, Jadon Malvar, Jaden Le
 
-Team Members:
-Nathan Le
+## What it does
+
+RecallRush helps students turn study material into quick flashcard-style quizzes. Students can create decks, generate or add cards, take quizzes, and track scores/confidence over time.
+
+## Why we built it
+
+Active recall is a powerful study technique, but students often default to passive studying because dedicating study time, making flashcards, and answering practice questions takes extra effort. RecallRush reduces that friction by offering a streamlined, all-in-one service for helping students start practicing faster.
+
+## Features
+
+- Create study decks by subject or topic
+- Add cards manually or generate flashcards with AI
+- Take quizzes from selected decks
+- Track recent, average, and best scores
+- Record confidence levels
+- Schedule study sessions with a calendar view
+
+## Built With
+
+- Next.js / React
+- TypeScript
+- Tailwind CSS
+- Gemini API
+
+## How to Run
+
+```bash
+npm install
+npm run dev

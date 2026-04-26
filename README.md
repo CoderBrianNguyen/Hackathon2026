@@ -1,4 +1,4 @@
-# RecallRush
+# Recall Rush
 
 Fast active-recall study sprints with instant feedback.
 

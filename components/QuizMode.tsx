@@ -150,7 +150,27 @@ export function QuizMode({ deck, onBack, onFinish }: QuizModeProps) {
           disabled={submittedResult !== null}
         />
 
-        {submittedResult === null ? (
+        {submittedResult === null && shortAnswers.some(sa => sa.cardId === currentCard.id) ? (
+          <div className="mt-4 space-y-3">
+            <div className="rounded-lg p-3 text-sm ring-1 bg-blue-50 text-blue-800 ring-blue-100">
+              <div className="flex items-center gap-2">
+                <Clock size={16} />
+                <p className="font-semibold">Pending Evaluation</p>
+              </div>
+              <p>
+                Your answer: <span className="font-medium">{typedAnswer.trim() || "No answer provided"}</span>
+              </p>
+              <p className="mt-2 text-xs opacity-75">This answer will be evaluated after you complete the quiz.</p>
+            </div>
+            <button
+              onClick={() => advanceQuiz(null)}
+              className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-500"
+            >
+              <Clock size={16} />
+              {index >= deck.cards.length - 1 ? "Finish Quiz" : "Next Card"}
+            </button>
+          </div>
+        ) : submittedResult === null ? (
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <button
               onClick={handleSubmitAnswer}
@@ -210,12 +230,6 @@ export function QuizMode({ deck, onBack, onFinish }: QuizModeProps) {
             >
               {submittedResult === true && <p className="font-semibold">Correct</p>}
               {submittedResult === false && <p className="font-semibold">Incorrect</p>}
-              {submittedResult === null && (
-                <div className="flex items-center gap-2">
-                  <Clock size={16} />
-                  <p className="font-semibold">Pending Evaluation</p>
-                </div>
-              )}
               <p>
                 Your answer: <span className="font-medium">{typedAnswer.trim() || "No answer provided"}</span>
               </p>
@@ -223,9 +237,6 @@ export function QuizMode({ deck, onBack, onFinish }: QuizModeProps) {
                 <p>
                   Expected answer: <span className="font-medium">{currentCard.back}</span>
                 </p>
-              )}
-              {submittedResult === null && (
-                <p className="mt-2 text-xs opacity-75">This answer will be evaluated after you complete the quiz.</p>
               )}
             </div>
             <button
@@ -240,7 +251,6 @@ export function QuizMode({ deck, onBack, onFinish }: QuizModeProps) {
             >
               {submittedResult === true && <CheckCircle size={16} />}
               {submittedResult === false && <XCircle size={16} />}
-              {submittedResult === null && <Clock size={16} />}
               {index >= deck.cards.length - 1 ? "Finish Quiz" : "Next Card"}
             </button>
           </div>

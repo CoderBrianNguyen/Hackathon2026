@@ -26,6 +26,7 @@ export function QuizMode({ deck, onBack, onFinish }: QuizModeProps) {
   const [missedCards, setMissedCards] = useState<Flashcard[]>([]);
   const [submittedResult, setSubmittedResult] = useState<boolean | null>(null);
   const [overrideResult, setOverrideResult] = useState<boolean | null>(null);
+  const [submissionState, setSubmissionState] = useState<"deferred" | "instant" | "idle" | null>(null);
   const [confidence, setConfidence] = useState<"not_sure" | "somewhat_sure" | "very_sure" | null>(null);
   const [confidenceScores, setConfidenceScores] = useState<number[]>([]);
   const [answers, setAnswers] = useState<QuizAnswer[]>([]);
@@ -112,13 +113,6 @@ export function QuizMode({ deck, onBack, onFinish }: QuizModeProps) {
     setSubmittedResult(null);
     setOverrideResult(null);
     setConfidence(null);
-  };
-
-  const handleSubmitAnswer = () => {
-    if (submittedResult !== null) return;
-    const isCorrect = normalizeAnswer(typedAnswer) === normalizeAnswer(currentCard.back);
-    setSubmittedResult(isCorrect);
-    setOverrideResult(null);
   };
 
   if (deck.cards.length === 0) {

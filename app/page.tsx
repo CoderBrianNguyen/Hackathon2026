@@ -180,7 +180,7 @@ export default function HomePage() {
   };
 
   if (!isHydrated) {
-    return <main className="mx-auto max-w-5xl p-6">Loading RecallRush...</main>;
+    return <main className="mx-auto max-w-5xl p-6">Loading Recall Rush...</main>;
   }
 
   const mainClassName =

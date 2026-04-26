@@ -198,7 +198,7 @@ export function Dashboard({
     <section className="min-h-screen">
       <aside className="hidden h-screen w-72 flex-col border-r border-slate-200 bg-white p-4 md:fixed md:inset-y-0 md:left-0 md:flex">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">RecallRush</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Recall Rush</h1>
           <p className="mt-1 text-sm text-slate-600">Fast active-recall study sprints with instant feedback.</p>
         </div>
 
@@ -234,7 +234,7 @@ export function Dashboard({
       <div className="p-4 md:ml-72 md:p-6">
         <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 md:hidden">
           <div className="mb-4">
-            <h1 className="text-2xl font-bold text-slate-900">RecallRush</h1>
+            <h1 className="text-2xl font-bold text-slate-900">Recall Rush</h1>
             <p className="mt-1 text-sm text-slate-600">Fast active-recall study sprints with instant feedback.</p>
           </div>
           <div className="flex flex-wrap gap-2">

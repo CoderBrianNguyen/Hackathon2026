@@ -3,7 +3,7 @@
 Fast active-recall study sprints with instant feedback.
 
 ## Team Members:
-Nathan Le, Brian Nguyen
+Nathan Le, Brian Nguyen, Jadon Malvar, Jaden Le
 
 ## What it does
 
@@ -11,7 +11,7 @@ RecallRush helps students turn study material into quick flashcard-style quizzes
 
 ## Why we built it
 
-Active recall is a powerful study technique, but students often default to passive studying because making flashcards and practice questions takes extra effort. RecallRush reduces that friction by helping students start practicing faster.
+Active recall is a powerful study technique, but students often default to passive studying because dedicating study time, making flashcards, and answering practice questions takes extra effort. RecallRush reduces that friction by offering a streamlined, all-in-one service for helping students start practicing faster.
 
 ## Features
 

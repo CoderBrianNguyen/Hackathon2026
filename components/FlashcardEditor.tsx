@@ -1,19 +1,24 @@
 "use client";
 
+import { useState } from "react";
 import { Plus, RotateCcw, Trash2 } from "lucide-react";
 import { Deck, Difficulty, Flashcard, Subject } from "@/lib/types";
 import { AIGenerationPanel } from "./AIGenerationPanel";
+import { Modal } from "./Modal";
 
 interface FlashcardEditorProps {
   deck: Deck;
   subjects: Subject[];
   onBack: () => void;
   onSave: (deck: Deck) => void;
+  onDeleteDeck: (deckId: string) => void;
 }
 
 const difficultyOptions: Difficulty[] = ["Easy", "Medium", "Hard"];
 
-export function FlashcardEditor({ deck, subjects, onBack, onSave }: FlashcardEditorProps) {
+export function FlashcardEditor({ deck, subjects, onBack, onSave, onDeleteDeck }: FlashcardEditorProps) {
+  const [isDeleteDeckModalOpen, setIsDeleteDeckModalOpen] = useState(false);
+
   const updateCard = (cardId: string, patch: Partial<Flashcard>) => {
     const updatedCards = deck.cards.map((card) => (card.id === cardId ? { ...card, ...patch } : card));
     onSave({ ...deck, cards: updatedCards });
@@ -33,6 +38,11 @@ export function FlashcardEditor({ deck, subjects, onBack, onSave }: FlashcardEdi
     onSave({ ...deck, cards: deck.cards.filter((card) => card.id !== cardId) });
   };
 
+  const deleteDeck = () => {
+    setIsDeleteDeckModalOpen(false);
+    onDeleteDeck(deck.id);
+  };
+
   return (
     <section className="space-y-5">
       <header className="flex flex-col gap-3 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200 md:flex-row md:items-center md:justify-between">
@@ -43,6 +53,12 @@ export function FlashcardEditor({ deck, subjects, onBack, onSave }: FlashcardEdi
         <div className="flex gap-2">
           <button onClick={onBack} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
             Back
+          </button>
+          <button
+            onClick={() => setIsDeleteDeckModalOpen(true)}
+            className="rounded-lg bg-rose-100 px-4 py-2 text-sm font-medium text-rose-700 hover:bg-rose-200"
+          >
+            Delete Deck
           </button>
           <button onClick={addCard} className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500">
             <Plus size={16} />
@@ -125,6 +141,34 @@ export function FlashcardEditor({ deck, subjects, onBack, onSave }: FlashcardEdi
         <RotateCcw size={16} />
         Done Editing
       </button>
+
+      <Modal
+        open={isDeleteDeckModalOpen}
+        title="Delete Deck?"
+        onClose={() => setIsDeleteDeckModalOpen(false)}
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setIsDeleteDeckModalOpen(false)}
+              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={deleteDeck}
+              className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-500"
+            >
+              Delete Deck
+            </button>
+          </>
+        }
+      >
+        <p className="text-sm text-slate-700">
+          Delete deck <span className="font-semibold">{deck.title}</span>? This cannot be undone.
+        </p>
+      </Modal>
     </section>
   );
 }

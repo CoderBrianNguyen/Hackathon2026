@@ -3,7 +3,7 @@
 import { CSSProperties, FormEvent, useEffect, useMemo, useState } from "react";
 import { CalendarCheck2, Check, ChevronLeft, ChevronRight, FolderPlus, Layers2, Plus } from "lucide-react";
 import { Deck, StudyPlan, Subject } from "@/lib/types";
-import { getSubjectColorTokens, normalizeSubjectColor } from "@/lib/subjectColor";
+import { DEFAULT_SUBJECT_COLOR, getSubjectColorTokens, normalizeSubjectColor } from "@/lib/subjectColor";
 import { DeckCard } from "./DeckCard";
 import { Modal } from "./Modal";
 
@@ -14,8 +14,9 @@ interface DashboardProps {
   subjects: Subject[];
   studyPlan: StudyPlan;
   onCreateDeck: (title: string, subjectId: string | null) => void;
-  onCreateSubject: (name: string) => Subject;
+  onCreateSubject: (name: string, color: string) => Subject;
   onUpdateSubject: (subjectId: string, patch: { name?: string; color?: string }) => void;
+  onDeleteSubject: (subjectId: string) => void;
   onUpdateStudyPlan: (studyPlan: StudyPlan) => void;
   onEditDeck: (deckId: string) => void;
   onStartQuiz: (deckId: string) => void;
@@ -74,6 +75,7 @@ export function Dashboard({
   onCreateDeck,
   onCreateSubject,
   onUpdateSubject,
+  onDeleteSubject,
   onUpdateStudyPlan,
   onEditDeck,
   onStartQuiz
@@ -83,6 +85,7 @@ export function Dashboard({
   const [deckTitle, setDeckTitle] = useState("");
   const [subjectId, setSubjectId] = useState<string>("none");
   const [subjectName, setSubjectName] = useState("");
+  const [subjectColor, setSubjectColor] = useState(DEFAULT_SUBJECT_COLOR);
   const [activeView, setActiveView] = useState<SidebarView>("all");
   const today = startOfDay(new Date());
   const todayKey = toDateKey(today);
@@ -163,6 +166,7 @@ export function Dashboard({
   const closeSubjectModal = () => {
     setIsCreateSubjectOpen(false);
     setSubjectName("");
+    setSubjectColor(DEFAULT_SUBJECT_COLOR);
   };
 
   const handleCreateDeck = (event: FormEvent) => {
@@ -183,8 +187,9 @@ export function Dashboard({
     const trimmedName = subjectName.trim();
     if (!trimmedName) return;
 
-    const createdSubject = onCreateSubject(trimmedName);
+    const createdSubject = onCreateSubject(trimmedName, subjectColor);
     setSubjectName("");
+    setSubjectColor(DEFAULT_SUBJECT_COLOR);
     setIsCreateSubjectOpen(false);
     setActiveView(`subject:${createdSubject.id}`);
   };
@@ -193,7 +198,7 @@ export function Dashboard({
     <section className="min-h-screen">
       <aside className="hidden h-screen w-72 flex-col border-r border-slate-200 bg-white p-4 md:fixed md:inset-y-0 md:left-0 md:flex">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">RecallRush</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Recall Rush</h1>
           <p className="mt-1 text-sm text-slate-600">Fast active-recall study sprints with instant feedback.</p>
         </div>
 
@@ -226,10 +231,10 @@ export function Dashboard({
         </div>
       </aside>
 
-      <div className="space-y-6 p-4 md:ml-72 md:p-6">
+      <div className="p-4 md:ml-72 md:p-6">
         <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 md:hidden">
           <div className="mb-4">
-            <h1 className="text-2xl font-bold text-slate-900">RecallRush</h1>
+            <h1 className="text-2xl font-bold text-slate-900">Recall Rush</h1>
             <p className="mt-1 text-sm text-slate-600">Fast active-recall study sprints with instant feedback.</p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -273,6 +278,10 @@ export function Dashboard({
               subject={activeSubject}
               decks={activeSubjectDecks}
               onUpdateSubject={onUpdateSubject}
+              onDeleteSubject={(subjectId) => {
+                onDeleteSubject(subjectId);
+                setActiveView("all");
+              }}
               onEditDeck={onEditDeck}
               onStartQuiz={onStartQuiz}
             />
@@ -391,6 +400,18 @@ export function Dashboard({
               placeholder="e.g. Biology"
               className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
               autoFocus
+            />
+          </div>
+          <div>
+            <label htmlFor="subject-color" className="text-sm font-medium text-slate-700">
+              Subject color
+            </label>
+            <input
+              id="subject-color"
+              type="color"
+              value={subjectColor}
+              onChange={(event) => setSubjectColor(normalizeSubjectColor(event.target.value))}
+              className="mt-1 h-10 w-full cursor-pointer rounded border border-slate-300 bg-transparent p-1"
             />
           </div>
         </form>
@@ -538,17 +559,20 @@ function SubjectDetailPanel({
   subject,
   decks,
   onUpdateSubject,
+  onDeleteSubject,
   onEditDeck,
   onStartQuiz
 }: {
   subject: Subject;
   decks: Deck[];
   onUpdateSubject: (subjectId: string, patch: { name?: string; color?: string }) => void;
+  onDeleteSubject: (subjectId: string) => void;
   onEditDeck: (deckId: string) => void;
   onStartQuiz: (deckId: string) => void;
 }) {
   const [draftName, setDraftName] = useState(subject.name);
   const [draftColor, setDraftColor] = useState(normalizeSubjectColor(subject.color));
+  const [isDeleteSubjectModalOpen, setIsDeleteSubjectModalOpen] = useState(false);
 
   useEffect(() => {
     setDraftName(subject.name);
@@ -563,6 +587,11 @@ function SubjectDetailPanel({
       name: draftName.trim(),
       color: normalizedDraftColor
     });
+  };
+
+  const deleteSubject = () => {
+    setIsDeleteSubjectModalOpen(false);
+    onDeleteSubject(subject.id);
   };
 
   return (
@@ -598,14 +627,23 @@ function SubjectDetailPanel({
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={saveSubject}
-          disabled={!draftName.trim() || !hasChanges}
-          className="mt-4 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-indigo-300"
-        >
-          Save Subject
-        </button>
+        <div className="mt-4 flex gap-2">
+          <button
+            type="button"
+            onClick={saveSubject}
+            disabled={!draftName.trim() || !hasChanges}
+            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-indigo-300"
+          >
+            Save Subject
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsDeleteSubjectModalOpen(true)}
+            className="rounded-lg bg-rose-100 px-4 py-2 text-sm font-medium text-rose-700 hover:bg-rose-200"
+          >
+            Delete Subject
+          </button>
+        </div>
       </div>
 
       {decks.length === 0 ? (
@@ -625,6 +663,34 @@ function SubjectDetailPanel({
           ))}
         </div>
       )}
+
+      <Modal
+        open={isDeleteSubjectModalOpen}
+        title="Delete Subject?"
+        onClose={() => setIsDeleteSubjectModalOpen(false)}
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setIsDeleteSubjectModalOpen(false)}
+              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={deleteSubject}
+              className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-500"
+            >
+              Delete Subject
+            </button>
+          </>
+        }
+      >
+        <p className="text-sm text-slate-700">
+          Delete subject <span className="font-semibold">{subject.name}</span>? Decks in this subject will become unassigned.
+        </p>
+      </Modal>
     </div>
   );
 }

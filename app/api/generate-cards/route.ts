@@ -79,7 +79,7 @@ const requestGemini = async (notes: string): Promise<Flashcard[]> => {
     throw new Error("Missing GEMINI_API_KEY in environment.");
   }
 
-  const prompt = `You are generating flashcards from study notes. Return ONLY valid JSON with this exact shape:\n{\n  "cards": [\n    {\n      "question": "string",\n      "answer": "string",\n      "hint": "string",\n      "difficulty": "easy|medium|hard"\n    }\n  ]\n}\nDo not include markdown fences or extra text. Generate 3 to 6 cards based on the notes.\n\nNotes:\n${notes}`;
+  const prompt = `You are generating flashcards from study notes. Return ONLY valid JSON with this exact shape:\n{\n  "cards": [\n    {\n      "question": "string",\n      "answer": "string",\n      "hint": "string",\n      "difficulty": "easy|medium|hard"\n    }\n  ]\n}\nDo not include markdown fences or extra text. Generate 1 to 20 cards based on the notes.\n\nNotes:\n${notes}`;
 
   const client = new GoogleGenerativeAI(apiKey);
   const model = client.getGenerativeModel({ model: GEMINI_MODEL });

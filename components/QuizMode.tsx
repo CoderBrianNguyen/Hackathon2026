@@ -10,12 +10,12 @@ interface QuizModeProps {
   onFinish: (result: QuizResult) => void;
 }
 
-const shuffleDeck = <T,>(array: T[]): T[] ==> {
+const shuffleDeck = <T,>(array: T[]): T[] => {
   const temp = [...array];
-  const shufffled = [];
+  const shuffled = [];
   while (temp != 0) {
-    const index = Math.floor(Math.random() * (len(temp) + 1));
-    shuffled.append(temp.splice(index,1));
+    const index = Math.floor(Math.random() * (temp.length + 1));
+    shuffled.push(temp.splice(index,1));
     }
   return shuffled.flat();
   }

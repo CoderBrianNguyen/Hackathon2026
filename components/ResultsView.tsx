@@ -12,12 +12,6 @@ interface ResultsViewProps {
 
 export function ResultsView({ result, deck, onReviewMissed, onBackToDashboard }: ResultsViewProps) {
   const percentage = Math.round((result.correct / result.total) * 100);
-  const cardById = new Map(deck.cards.map((card) => [card.id, card]));
-  const lowConfidenceCards = result.answers
-    .filter((answer) => !answer.isCorrect || (answer.isCorrect && answer.confidence === 1))
-    .map((answer) => cardById.get(answer.cardId))
-    .filter((card): card is Deck["cards"][number] => Boolean(card))
-    .filter((card, index, cards) => cards.findIndex((candidate) => candidate.id === card.id) === index);
 
   return (
     <section className="space-y-4">
@@ -53,28 +47,10 @@ export function ResultsView({ result, deck, onReviewMissed, onBackToDashboard }:
         )}
       </div>
 
-      <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-        <h3 className="text-lg font-semibold text-slate-900">
-          Low confidence cards to review first ({lowConfidenceCards.length})
-        </h3>
-        {lowConfidenceCards.length === 0 ? (
-          <p className="mt-2 text-sm text-emerald-700">No low-confidence cards this round — strong retention!</p>
-        ) : (
-          <ul className="mt-3 space-y-2">
-            {lowConfidenceCards.map((card) => (
-              <li key={card.id} className="rounded-lg bg-amber-50 p-3 text-sm ring-1 ring-amber-100">
-                <p className="font-semibold text-amber-900">Q: {card.front}</p>
-                <p className="text-amber-700">A: {card.back}</p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
       <div className="flex flex-wrap gap-2">
         <button
           onClick={onReviewMissed}
-          disabled={lowConfidenceCards.length === 0}
+          disabled={result.missedCards.length === 0}
           className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-emerald-300"
         >
           <RotateCcw size={16} />

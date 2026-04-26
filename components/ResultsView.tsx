@@ -71,68 +71,6 @@ export function ResultsView({ result, deck, onReviewMissed, onBackToDashboard }:
         )}
       </div>
 
-      {result.evaluations && result.evaluations.length > 0 && (
-        <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-          <h3 className="text-lg font-semibold text-slate-900">
-            Evaluated Short Answers ({result.evaluations.length})
-          </h3>
-          <div className="mt-3 space-y-3">
-            {result.evaluations.map((evaluation) => {
-              const card = cardById.get(evaluation.cardId);
-              const answer = result.answers?.find(a => a.cardId === evaluation.cardId);
-              if (!card) return null;
-
-              return (
-                <div
-                  key={evaluation.cardId}
-                  className={`rounded-lg p-4 ring-1 ${
-                    evaluation.isCorrect
-                      ? "bg-emerald-50 ring-emerald-100"
-                      : "bg-rose-50 ring-rose-100"
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className={`mt-1 flex-shrink-0 rounded-full p-1 ${
-                      evaluation.isCorrect ? "bg-emerald-100" : "bg-rose-100"
-                    }`}>
-                      {evaluation.isCorrect ? (
-                        <Trophy size={14} className="text-emerald-600" />
-                      ) : (
-                        <RotateCcw size={14} className="text-rose-600" />
-                      )}
-                    </div>
-                    <div className="flex-grow">
-                      <p className="font-semibold text-slate-900 mb-2">Q: {card.front}</p>
-                      <div className="bg-white rounded p-2 mb-2 ring-1 ring-slate-200">
-                        <p className="text-sm text-slate-700">
-                          <span className="font-semibold">Your answer:</span> {answer?.userAnswer || "No answer provided"}
-                        </p>
-                      </div>
-                      <div className={`bg-white rounded p-2 mb-2 ring-1 ${
-                        evaluation.isCorrect ? "ring-emerald-200" : "ring-rose-200"
-                      }`}>
-                        <p className="text-sm text-slate-700">
-                          <span className="font-semibold">Expected:</span> {card.back}
-                        </p>
-                      </div>
-                      <div className={`text-sm ${evaluation.isCorrect ? "text-emerald-800" : "text-rose-800"}`}>
-                        <p className="font-semibold mb-1">
-                          {evaluation.isCorrect ? "✓ Correct" : "✗ Incorrect"}
-                        </p>
-                        <p className="mb-1">{evaluation.feedback}</p>
-                        <p className="text-xs opacity-75">
-                          AI Confidence: {evaluation.confidence}%
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
       <div className="flex flex-wrap gap-2">
         <button
           onClick={onReviewMissed}

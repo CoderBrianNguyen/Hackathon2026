@@ -22,7 +22,7 @@ export function AIGenerationPanel({ onApproveCards }: AIGenerationPanelProps) {
     setIsLoading(true);
 
     try {
-      const response = await fetch("/api/gemini", {
+      const response = await fetch("/api/generate-cards", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ notes })

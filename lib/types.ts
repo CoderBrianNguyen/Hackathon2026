@@ -62,6 +62,13 @@ export interface AnswerEvaluation {
   feedback: string;
 }
 
+export interface ShortAnswerForEvaluation {
+  cardId: string;
+  question: string;
+  studentAnswer: string;
+  expectedAnswer: string;
+}
+
 export interface QuizResult {
   deckId: string;
   total: number;
@@ -72,6 +79,7 @@ export interface QuizResult {
   completedAt: string;
   averageConfidence: number | null;
   evaluations?: AnswerEvaluation[];
+  shortAnswersForEvaluation?: ShortAnswerForEvaluation[];
 }
 
 export type AppView = "dashboard" | "editor" | "quiz" | "evaluate-short-answers" | "results";

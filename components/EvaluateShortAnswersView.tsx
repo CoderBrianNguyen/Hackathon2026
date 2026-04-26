@@ -1,20 +1,12 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Loader, CheckCircle, XCircle, Trophy } from "lucide-react";
-import { Deck, QuizResult, AnswerEvaluation } from "@/lib/types";
-
-interface ShortAnswer {
-  cardId: string;
-  question: string;
-  studentAnswer: string;
-  expectedAnswer: string;
-}
+import { useState } from "react";
+import { Loader, CheckCircle, XCircle } from "lucide-react";
+import { QuizResult, AnswerEvaluation, ShortAnswerForEvaluation } from "@/lib/types";
 
 interface EvaluateShortAnswersViewProps {
   result: QuizResult;
-  shortAnswers: ShortAnswer[];
-  deck: Deck;
+  shortAnswers: ShortAnswerForEvaluation[];
   onEvaluated: (result: QuizResult) => void;
   onBackToDashboard: () => void;
 }
@@ -22,15 +14,12 @@ interface EvaluateShortAnswersViewProps {
 export function EvaluateShortAnswersView({
   result,
   shortAnswers,
-  deck,
   onEvaluated,
   onBackToDashboard
 }: EvaluateShortAnswersViewProps) {
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [evaluations, setEvaluations] = useState<AnswerEvaluation[]>([]);
   const [hasEvaluated, setHasEvaluated] = useState(false);
-
-  const cardById = useMemo(() => new Map(deck.cards.map((card) => [card.id, card])), [deck.cards]);
 
   const handleEvaluate = async () => {
     setIsEvaluating(true);

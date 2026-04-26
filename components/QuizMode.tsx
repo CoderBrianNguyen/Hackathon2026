@@ -2,14 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { CheckCircle, XCircle, Clock } from "lucide-react";
-import { Deck, Flashcard, QuizAnswer, QuizResult } from "@/lib/types";
-
-interface ShortAnswer {
-  cardId: string;
-  question: string;
-  studentAnswer: string;
-  expectedAnswer: string;
-}
+import { Deck, Flashcard, QuizAnswer, QuizResult, ShortAnswerForEvaluation } from "@/lib/types";
 
 interface QuizModeProps {
   deck: Deck;
@@ -33,10 +26,11 @@ export function QuizMode({ deck, onBack, onFinish }: QuizModeProps) {
   const [correctCount, setCorrectCount] = useState(0);
   const [missedCards, setMissedCards] = useState<Flashcard[]>([]);
   const [submittedResult, setSubmittedResult] = useState<boolean | null>(null);
+  const [submissionState, setSubmissionState] = useState<"idle" | "instant" | "deferred">("idle");
   const [confidence, setConfidence] = useState<"not_sure" | "somewhat_sure" | "very_sure" | null>(null);
   const [confidenceScores, setConfidenceScores] = useState<number[]>([]);
   const [answers, setAnswers] = useState<QuizAnswer[]>([]);
-  const [shortAnswers, setShortAnswers] = useState<ShortAnswer[]>([]);
+  const [shortAnswers, setShortAnswers] = useState<ShortAnswerForEvaluation[]>([]);
 
   const shuffledCards = useMemo(() => shuffleDeck(deck.cards), [deck.id]);
   const currentCard = shuffledCards[index];
@@ -51,23 +45,25 @@ export function QuizMode({ deck, onBack, onFinish }: QuizModeProps) {
   };
 
   const handleSubmitAnswer = () => {
-    if (submittedResult !== null) return;
+    if (submissionState !== "idle") return;
 
     const wordCount = typedAnswer.trim().split(/\s+/).length;
 
     if (wordCount > 3) {
-      // For complex answers, defer evaluation to results page
-      setSubmittedResult(null); // Mark as neither correct nor incorrect yet
+      // For longer answers, defer grading until the end for one batch request.
       setShortAnswers([...shortAnswers, {
         cardId: currentCard.id,
         question: currentCard.front,
         studentAnswer: typedAnswer,
         expectedAnswer: currentCard.back
       }]);
+      setSubmittedResult(null);
+      setSubmissionState("deferred");
     } else {
       // For short answers, use simple matching immediately
       const isCorrect = normalizeAnswer(typedAnswer) === normalizeAnswer(currentCard.back);
       setSubmittedResult(isCorrect);
+      setSubmissionState("instant");
     }
   };
 
@@ -103,7 +99,7 @@ export function QuizMode({ deck, onBack, onFinish }: QuizModeProps) {
         completedAt: new Date().toISOString(),
         averageConfidence,
         shortAnswersForEvaluation: shortAnswers.length > 0 ? shortAnswers : undefined
-      } as any);
+      });
       return;
     }
 
@@ -114,6 +110,7 @@ export function QuizMode({ deck, onBack, onFinish }: QuizModeProps) {
     setIndex((prev) => prev + 1);
     setTypedAnswer("");
     setSubmittedResult(null);
+    setSubmissionState("idle");
     setConfidence(null);
   };
 
@@ -147,8 +144,11 @@ export function QuizMode({ deck, onBack, onFinish }: QuizModeProps) {
           onChange={(event) => setTypedAnswer(event.target.value)}
           placeholder="Type your answer here..."
           className="mt-4 h-24 w-full rounded-lg border border-slate-300 p-3 text-sm"
-          disabled={submittedResult !== null}
+          disabled={submissionState !== "idle"}
         />
+        <p className="mt-2 text-xs text-slate-500">
+          Answers longer than 3 words are graded after the quiz to reduce API requests.
+        </p>
 
         {submittedResult === null && shortAnswers.some(sa => sa.cardId === currentCard.id) ? (
           <div className="mt-4 space-y-3">
@@ -221,11 +221,13 @@ export function QuizMode({ deck, onBack, onFinish }: QuizModeProps) {
           <div className="mt-4 space-y-3">
             <div
               className={`rounded-lg p-3 text-sm ring-1 ${
-                submittedResult === true
+                submissionState === "deferred"
+                  ? "bg-blue-50 text-blue-800 ring-blue-100"
+                  : submittedResult === true
                   ? "bg-emerald-50 text-emerald-800 ring-emerald-100"
                   : submittedResult === false
                   ? "bg-rose-50 text-rose-800 ring-rose-100"
-                  : "bg-blue-50 text-blue-800 ring-blue-100"
+                  : "bg-slate-50 text-slate-800 ring-slate-200"
               }`}
             >
               {submittedResult === true && <p className="font-semibold">Correct</p>}
@@ -233,20 +235,22 @@ export function QuizMode({ deck, onBack, onFinish }: QuizModeProps) {
               <p>
                 Your answer: <span className="font-medium">{typedAnswer.trim() || "No answer provided"}</span>
               </p>
-              {submittedResult === false && (
+              {submissionState === "instant" && submittedResult === false && (
                 <p>
                   Expected answer: <span className="font-medium">{currentCard.back}</span>
                 </p>
               )}
             </div>
             <button
-              onClick={() => advanceQuiz(submittedResult)}
+              onClick={() => advanceQuiz(submissionState === "deferred" ? null : submittedResult)}
               className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white ${
-                submittedResult === true
+                submissionState === "deferred"
+                  ? "bg-blue-600 hover:bg-blue-500"
+                  : submittedResult === true
                   ? "bg-emerald-600 hover:bg-emerald-500"
                   : submittedResult === false
                   ? "bg-rose-600 hover:bg-rose-500"
-                  : "bg-blue-600 hover:bg-blue-500"
+                  : "bg-slate-600 hover:bg-slate-500"
               }`}
             >
               {submittedResult === true && <CheckCircle size={16} />}

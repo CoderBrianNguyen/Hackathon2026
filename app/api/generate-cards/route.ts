@@ -35,8 +35,8 @@ const toFlashcard = (item: GeminiCard): Flashcard | null => {
 
   return {
     id: crypto.randomUUID(),
-    front: question,
-    back: hint ? `${answer}\n\nHint: ${hint}` : answer,
+    front: hint ? `${question}\n(Hint: ${hint})` : question,
+    back: answer,
     difficulty: toDifficulty(item.difficulty)
   };
 };

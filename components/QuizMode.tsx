@@ -10,6 +10,16 @@ interface QuizModeProps {
   onFinish: (result: QuizResult) => void;
 }
 
+const shuffleDeck = <T,>(array: T[]): T[] => {
+  const temp = [...array];
+  const shuffled = [];
+  while (temp != 0) {
+    const index = Math.floor(Math.random() * (temp.length + 1));
+    shuffled.push(temp.splice(index,1));
+    }
+  return shuffled.flat();
+  }
+
 export function QuizMode({ deck, onBack, onFinish }: QuizModeProps) {
   const [index, setIndex] = useState(0);
   const [typedAnswer, setTypedAnswer] = useState("");
@@ -19,8 +29,9 @@ export function QuizMode({ deck, onBack, onFinish }: QuizModeProps) {
   const [confidence, setConfidence] = useState<"not_sure" | "somewhat_sure" | "very_sure" | null>(null);
   const [confidenceScores, setConfidenceScores] = useState<number[]>([]);
 
-  const currentCard = deck.cards[index];
-  const progressPercent = useMemo(() => ((index + 1) / deck.cards.length) * 100, [index, deck.cards.length]);
+  const shuffledCards = useMemo(() => shuffleDeck(deck.cards), [deck.id]);
+  const currentCard = shuffledCards[index];
+  const progressPercent = useMemo(() => ((index + 1) / shuffledCards.length) * 100, [index, shuffledCards.length]);
 
   const normalizeAnswer = (answer: string) => answer.replace(/\s+/g, "").toLowerCase();
   const confidenceToScore = (value: "not_sure" | "somewhat_sure" | "very_sure" | null) => {

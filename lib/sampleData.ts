@@ -25,11 +25,27 @@ export const sampleAppData: AppData = {
     {
       id: "deck-plant-bio",
       title: "Plant Biology",
-      lastScore: 80,
+      lastScore: 90,
       subjectId: "subject-science",
       attempts: [
+        { completedAt: toIsoDaysAgo(360), total: 10, correct: 5, score: 50, averageConfidence: 39 },
+        { completedAt: toIsoDaysAgo(335), total: 10, correct: 6, score: 60, averageConfidence: 44 },
+        { completedAt: toIsoDaysAgo(312), total: 10, correct: 6, score: 60, averageConfidence: 46 },
+        { completedAt: toIsoDaysAgo(289), total: 10, correct: 7, score: 70, averageConfidence: 51 },
+        { completedAt: toIsoDaysAgo(265), total: 10, correct: 6, score: 60, averageConfidence: 49 },
+        { completedAt: toIsoDaysAgo(242), total: 10, correct: 7, score: 70, averageConfidence: 56 },
+        { completedAt: toIsoDaysAgo(218), total: 10, correct: 8, score: 80, averageConfidence: 62 },
+        { completedAt: toIsoDaysAgo(194), total: 10, correct: 7, score: 70, averageConfidence: 60 },
+        { completedAt: toIsoDaysAgo(172), total: 10, correct: 8, score: 80, averageConfidence: 65 },
+        { completedAt: toIsoDaysAgo(148), total: 10, correct: 8, score: 80, averageConfidence: 68 },
+        { completedAt: toIsoDaysAgo(126), total: 10, correct: 9, score: 90, averageConfidence: 73 },
+        { completedAt: toIsoDaysAgo(103), total: 10, correct: 8, score: 80, averageConfidence: 70 },
+        { completedAt: toIsoDaysAgo(81), total: 10, correct: 9, score: 90, averageConfidence: 77 },
+        { completedAt: toIsoDaysAgo(65), total: 10, correct: 8, score: 80, averageConfidence: 74 },
         { completedAt: toIsoDaysAgo(50), total: 10, correct: 7, score: 70, averageConfidence: 58 },
+        { completedAt: toIsoDaysAgo(34), total: 10, correct: 8, score: 80, averageConfidence: 66 },
         { completedAt: toIsoDaysAgo(14), total: 10, correct: 8, score: 80, averageConfidence: 67 },
+        { completedAt: toIsoDaysAgo(7), total: 10, correct: 9, score: 90, averageConfidence: 79 },
         { completedAt: toIsoDaysAgo(2), total: 10, correct: 9, score: 90, averageConfidence: 83 }
       ],
       cards: [

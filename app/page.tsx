@@ -48,12 +48,12 @@ export default function HomePage() {
     setDecks((prev) => [newDeck, ...prev]);
   };
 
-  const createSubject = (name: string) => {
+  const createSubject = (name: string, color: string) => {
     const subject: Subject = {
       id: crypto.randomUUID(),
       name,
       createdAt: new Date().toISOString(),
-      color: normalizeSubjectColor(DEFAULT_SUBJECT_COLOR)
+      color: normalizeSubjectColor(color || DEFAULT_SUBJECT_COLOR)
     };
     setSubjects((prev) => [subject, ...prev]);
     return subject;
@@ -80,6 +80,37 @@ export default function HomePage() {
 
   const updateDeck = (updatedDeck: Deck) => {
     setDecks((prev) => prev.map((deck) => (deck.id === updatedDeck.id ? updatedDeck : deck)));
+  };
+
+  const deleteDeck = (deckId: string) => {
+    setDecks((prev) => prev.filter((deck) => deck.id !== deckId));
+    setStudyPlan((prev) => ({
+      ...prev,
+      dayPlans: prev.dayPlans
+        .map((dayPlan) => ({
+          ...dayPlan,
+          deckIds: dayPlan.deckIds.filter((id) => id !== deckId)
+        }))
+        .filter((dayPlan) => dayPlan.deckIds.length > 0)
+    }));
+    if (activeDeckId === deckId) {
+      setActiveDeckId(null);
+      setActiveView("dashboard");
+    }
+  };
+
+  const deleteSubject = (subjectId: string) => {
+    setSubjects((prev) => prev.filter((subject) => subject.id !== subjectId));
+    setDecks((prev) =>
+      prev.map((deck) =>
+        deck.subjectId === subjectId
+          ? {
+              ...deck,
+              subjectId: null
+            }
+          : deck
+      )
+    );
   };
 
   const updateStudyPlan = (nextStudyPlan: StudyPlan) => {
@@ -167,6 +198,7 @@ export default function HomePage() {
           onCreateDeck={createDeck}
           onCreateSubject={createSubject}
           onUpdateSubject={updateSubject}
+          onDeleteSubject={deleteSubject}
           onUpdateStudyPlan={updateStudyPlan}
           onEditDeck={openEditor}
           onStartQuiz={startQuiz}
@@ -178,6 +210,7 @@ export default function HomePage() {
           deck={activeDeck}
           subjects={subjects}
           onSave={updateDeck}
+          onDeleteDeck={deleteDeck}
           onBack={() => setActiveView("dashboard")}
         />
       )}

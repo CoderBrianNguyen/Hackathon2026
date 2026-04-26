@@ -12,13 +12,12 @@ interface QuizModeProps {
 
 const shuffleDeck = <T,>(array: T[]): T[] => {
   const temp = [...array];
-  const shuffled = [];
-  while (temp != 0) {
-    const index = Math.floor(Math.random() * (temp.length + 1));
-    shuffled.push(temp.splice(index,1));
-    }
-  return shuffled.flat();
+  for (let i = temp.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [temp[i], temp[j]] = [temp[j], temp[i]];
   }
+  return temp;
+};
 
 export function QuizMode({ deck, onBack, onFinish }: QuizModeProps) {
   const [index, setIndex] = useState(0);
@@ -26,6 +25,7 @@ export function QuizMode({ deck, onBack, onFinish }: QuizModeProps) {
   const [correctCount, setCorrectCount] = useState(0);
   const [missedCards, setMissedCards] = useState<Flashcard[]>([]);
   const [submittedResult, setSubmittedResult] = useState<boolean | null>(null);
+  const [overrideResult, setOverrideResult] = useState<boolean | null>(null);
   const [confidence, setConfidence] = useState<"not_sure" | "somewhat_sure" | "very_sure" | null>(null);
   const [confidenceScores, setConfidenceScores] = useState<number[]>([]);
   const [answers, setAnswers] = useState<QuizAnswer[]>([]);
@@ -35,6 +35,7 @@ export function QuizMode({ deck, onBack, onFinish }: QuizModeProps) {
   const progressPercent = useMemo(() => ((index + 1) / shuffledCards.length) * 100, [index, shuffledCards.length]);
 
   const normalizeAnswer = (answer: string) => answer.replace(/\s+/g, "").toLowerCase();
+  const effectiveResult = overrideResult ?? submittedResult;
   const confidenceToScore = (value: "not_sure" | "somewhat_sure" | "very_sure" | null) => {
     if (value === "not_sure") return 33;
     if (value === "somewhat_sure") return 67;
@@ -82,6 +83,7 @@ export function QuizMode({ deck, onBack, onFinish }: QuizModeProps) {
     setIndex((prev) => prev + 1);
     setTypedAnswer("");
     setSubmittedResult(null);
+    setOverrideResult(null);
     setConfidence(null);
   };
 
@@ -89,6 +91,7 @@ export function QuizMode({ deck, onBack, onFinish }: QuizModeProps) {
     if (submittedResult !== null) return;
     const isCorrect = normalizeAnswer(typedAnswer) === normalizeAnswer(currentCard.back);
     setSubmittedResult(isCorrect);
+    setOverrideResult(null);
   };
 
   if (deck.cards.length === 0) {
@@ -175,26 +178,62 @@ export function QuizMode({ deck, onBack, onFinish }: QuizModeProps) {
           <div className="mt-4 space-y-3">
             <div
               className={`rounded-lg p-3 text-sm ring-1 ${
-                submittedResult ? "bg-emerald-50 text-emerald-800 ring-emerald-100" : "bg-rose-50 text-rose-800 ring-rose-100"
+                effectiveResult ? "bg-emerald-50 text-emerald-800 ring-emerald-100" : "bg-rose-50 text-rose-800 ring-rose-100"
               }`}
             >
-              <p className="font-semibold">{submittedResult ? "Correct" : "Incorrect"}</p>
+              <p className="font-semibold">{effectiveResult ? "Correct" : "Incorrect"}</p>
               <p>
                 Your answer: <span className="font-medium">{typedAnswer.trim() || "No answer provided"}</span>
               </p>
-              {!submittedResult && (
+              {submittedResult === false && (
                 <p>
                   Expected answer: <span className="font-medium">{currentCard.back}</span>
                 </p>
               )}
+              <div className="mt-3">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-600">Override Result</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setOverrideResult(true)}
+                    className={`rounded-md border px-3 py-1.5 text-xs font-medium ${
+                      effectiveResult
+                        ? "border-emerald-200 bg-emerald-100 text-emerald-800"
+                        : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                    }`}
+                  >
+                    Mark Correct
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setOverrideResult(false)}
+                    className={`rounded-md border px-3 py-1.5 text-xs font-medium ${
+                      effectiveResult === false
+                        ? "border-rose-200 bg-rose-100 text-rose-800"
+                        : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                    }`}
+                  >
+                    Mark Incorrect
+                  </button>
+                  {overrideResult !== null ? (
+                    <button
+                      type="button"
+                      onClick={() => setOverrideResult(null)}
+                      className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                    >
+                      Revert Override
+                    </button>
+                  ) : null}
+                </div>
+              </div>
             </div>
             <button
-              onClick={() => advanceQuiz(submittedResult)}
+              onClick={() => advanceQuiz(Boolean(effectiveResult))}
               className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white ${
-                submittedResult ? "bg-emerald-600 hover:bg-emerald-500" : "bg-rose-600 hover:bg-rose-500"
+                effectiveResult ? "bg-emerald-600 hover:bg-emerald-500" : "bg-rose-600 hover:bg-rose-500"
               }`}
             >
-              {submittedResult ? <CheckCircle size={16} /> : <XCircle size={16} />}
+              {effectiveResult ? <CheckCircle size={16} /> : <XCircle size={16} />}
               {index >= deck.cards.length - 1 ? "Finish Quiz" : "Next Card"}
             </button>
           </div>

@@ -2,7 +2,8 @@ import { AppData, Deck, StudyPlan, Subject } from "./types";
 import { sampleAppData } from "./sampleData";
 import { normalizeSubjectColor } from "./subjectColor";
 
-const STORAGE_KEY = "recallrush_decks_v1";
+const STORAGE_KEY = "recallrush_decks_v2";
+const LEGACY_STORAGE_KEYS = ["recallrush_decks_v1"];
 
 const normalizeAttempts = (attempts: unknown) => {
   if (!Array.isArray(attempts)) return [];
@@ -77,6 +78,10 @@ export const loadAppData = (): AppData => {
   if (typeof window === "undefined") {
     return sampleAppData;
   }
+
+  LEGACY_STORAGE_KEYS.forEach((key) => {
+    window.localStorage.removeItem(key);
+  });
 
   const rawData = window.localStorage.getItem(STORAGE_KEY);
   if (!rawData) {

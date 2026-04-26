@@ -21,6 +21,24 @@ export interface DeckScoreStats {
   attemptCount: number;
 }
 
+export interface ScoreHistoryPoint {
+  completedAt: string;
+  value: number | null;
+}
+
+export interface ScoreInsight {
+  current: number | null;
+  delta: number | null;
+  history: ScoreHistoryPoint[];
+}
+
+export interface DeckScoreInsights {
+  recentScore: ScoreInsight;
+  averageScore: ScoreInsight;
+  bestScore: ScoreInsight;
+  averageConfidence: ScoreInsight;
+}
+
 const toDateKey = (date: Date) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -38,6 +56,28 @@ const getLevel = (count: number, maxCount: number): 0 | 1 | 2 | 3 | 4 => {
   if (count === 3) return 3;
   return 4;
 };
+
+const getDelta = (history: ScoreHistoryPoint[]): number | null => {
+  if (history.length === 0) return null;
+
+  const current = history[history.length - 1]?.value ?? null;
+  if (current === null) return null;
+
+  for (let index = history.length - 2; index >= 0; index -= 1) {
+    const previous = history[index]?.value ?? null;
+    if (previous !== null) {
+      return current - previous;
+    }
+  }
+
+  return 0;
+};
+
+const toInsight = (history: ScoreHistoryPoint[]): ScoreInsight => ({
+  current: history.length > 0 ? history[history.length - 1]?.value ?? null : null,
+  delta: getDelta(history),
+  history
+});
 
 export const getDeckScoreStats = (deck: Deck): DeckScoreStats => {
   const attempts = deck.attempts ?? [];
@@ -72,6 +112,65 @@ export const getDeckScoreStats = (deck: Deck): DeckScoreStats => {
     bestScore,
     averageConfidence,
     attemptCount: sortedAttempts.length
+  };
+};
+
+export const getDeckScoreInsights = (deck: Deck): DeckScoreInsights => {
+  const attempts = [...(deck.attempts ?? [])].sort(
+    (a, b) => new Date(a.completedAt).getTime() - new Date(b.completedAt).getTime()
+  );
+
+  if (attempts.length === 0) {
+    return {
+      recentScore: toInsight([]),
+      averageScore: toInsight([]),
+      bestScore: toInsight([]),
+      averageConfidence: toInsight([])
+    };
+  }
+
+  const recentScoreHistory: ScoreHistoryPoint[] = [];
+  const averageScoreHistory: ScoreHistoryPoint[] = [];
+  const bestScoreHistory: ScoreHistoryPoint[] = [];
+  const averageConfidenceHistory: ScoreHistoryPoint[] = [];
+
+  let runningScoreTotal = 0;
+  let runningBestScore = 0;
+  let runningConfidenceTotal = 0;
+  let runningConfidenceCount = 0;
+
+  attempts.forEach((attempt, index) => {
+    runningScoreTotal += attempt.score;
+    runningBestScore = Math.max(runningBestScore, attempt.score);
+
+    if (typeof attempt.averageConfidence === "number") {
+      runningConfidenceTotal += attempt.averageConfidence;
+      runningConfidenceCount += 1;
+    }
+
+    recentScoreHistory.push({
+      completedAt: attempt.completedAt,
+      value: attempt.score
+    });
+    averageScoreHistory.push({
+      completedAt: attempt.completedAt,
+      value: Math.round(runningScoreTotal / (index + 1))
+    });
+    bestScoreHistory.push({
+      completedAt: attempt.completedAt,
+      value: runningBestScore
+    });
+    averageConfidenceHistory.push({
+      completedAt: attempt.completedAt,
+      value: runningConfidenceCount > 0 ? Math.round(runningConfidenceTotal / runningConfidenceCount) : null
+    });
+  });
+
+  return {
+    recentScore: toInsight(recentScoreHistory),
+    averageScore: toInsight(averageScoreHistory),
+    bestScore: toInsight(bestScoreHistory),
+    averageConfidence: toInsight(averageConfidenceHistory)
   };
 };
 

@@ -13,21 +13,9 @@ interface GeminiCard {
   difficulty?: unknown;
 }
 
-class GeminiRequestError extends Error {
-  status?: number;
-  constructor(message: string, status?: number) {
-    super(message);
-    this.name = "GeminiRequestError";
-    this.status = status;
-  }
-}
-
-const GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
-const MAX_RETRIES = 3;
+const GEMINI_MODEL = "gemini-2.0-flash";
 
 const fallbackFromNotes = (notes: string): Flashcard[] => mockGenerateCards(notes);
-
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const toDifficulty = (value: unknown): Flashcard["difficulty"] => {
   const normalized = String(value ?? "").toLowerCase();
@@ -84,121 +72,63 @@ const parseGeminiCards = (rawText: string): Flashcard[] | null => {
   return null;
 };
 
-const getRetryDelayMs = (attempt: number, retryAfterHeader: string | null): number => {
-  if (retryAfterHeader) {
-    const seconds = Number(retryAfterHeader);
-    if (Number.isFinite(seconds) && seconds >= 0) {
-      return Math.min(seconds * 1000, 10000);
-    }
-  }
-  return Math.min(1000 * 2 ** attempt, 10000);
-};
-
-const requestGeminiWithModel = async (notes: string, model: string): Promise<Flashcard[]> => {
+const requestGemini = async (notes: string): Promise<Flashcard[]> => {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    throw new GeminiRequestError("Missing GEMINI_API_KEY in environment.");
+    throw new Error("Missing GEMINI_API_KEY in environment.");
   }
 
-  const prompt = `You are generating flashcards from study notes. Return ONLY valid JSON with this exact shape:\n{\n  "cards": [\n    {\n      "question": "string",\n      "answer": "string",\n      "hint": "string",\n      "difficulty": "easy|medium|hard"\n    }\n  ]\n}\nDo not include markdown fences or extra text. Generate 3 to 4 cards based on the notes.\n\nNotes:\n${notes}`;
+  const prompt = `You are generating flashcards from study notes. Return ONLY valid JSON with this exact shape:\n{\n  "cards": [\n    {\n      "question": "string",\n      "answer": "string",\n      "hint": "string",\n      "difficulty": "easy|medium|hard"\n    }\n  ]\n}\nDo not include markdown fences or extra text. Generate 3 to 6 cards based on the notes.\n\nNotes:\n${notes}`;
 
-  for (let attempt = 0; attempt < MAX_RETRIES; attempt += 1) {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.3,
-            responseMimeType: "application/json"
-          }
-        })
-      }
-    );
-
-    const rawResponse = await response.text();
-
-    if (!response.ok) {
-      console.error("Gemini API request failed.", {
-        model,
-        attempt: attempt + 1,
-        status: response.status,
-        statusText: response.statusText,
-        rawResponse
-      });
-
-      if ((response.status === 429 || response.status === 503) && attempt < MAX_RETRIES - 1) {
-        const delayMs = getRetryDelayMs(attempt, response.headers.get("retry-after"));
-        await sleep(delayMs);
-        continue;
-      }
-
-      throw new GeminiRequestError("Gemini API request failed.", response.status);
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.3,
+          responseMimeType: "application/json"
+        }
+      })
     }
+  );
 
-    let candidateText = "";
-    try {
-      const parsed = JSON.parse(rawResponse) as {
-        candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-      };
-      candidateText = parsed.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-    } catch (error) {
-      console.error("Failed to parse Gemini API wrapper JSON.", { model, error, rawResponse });
-      throw new GeminiRequestError("Invalid Gemini API response wrapper.");
-    }
+  const rawResponse = await response.text();
 
-    const cards = parseGeminiCards(candidateText);
-    if (!cards) {
-      console.error("Failed to parse Gemini card JSON.", {
-        model,
-        candidateText,
-        rawResponse
-      });
-      throw new GeminiRequestError("Could not parse Gemini flashcard JSON.");
-    }
-
-    return cards;
+  if (!response.ok) {
+    console.error("Gemini API request failed.", {
+      status: response.status,
+      statusText: response.statusText,
+      rawResponse
+    });
+    throw new Error("Gemini API request failed.");
   }
 
-  throw new GeminiRequestError("Gemini retries exhausted.", 429);
-};
-
-const requestGemini = async (notes: string): Promise<Flashcard[]> => {
-  let lastError: GeminiRequestError | null = null;
-
-  for (const model of GEMINI_MODELS) {
-    try {
-      return await requestGeminiWithModel(notes, model);
-    } catch (error) {
-      const requestError =
-        error instanceof GeminiRequestError ? error : new GeminiRequestError("Unknown Gemini failure.");
-      lastError = requestError;
-
-      if (requestError.status === 429 || requestError.status === 503 || requestError.status === 404) {
-        continue;
-      }
-
-      throw requestError;
-    }
+  let candidateText = "";
+  try {
+    const parsed = JSON.parse(rawResponse) as {
+      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+    };
+    candidateText = parsed.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+  } catch (error) {
+    console.error("Failed to parse Gemini API wrapper JSON.", { error, rawResponse });
+    throw new Error("Invalid Gemini API response wrapper.");
   }
 
-  throw lastError ?? new GeminiRequestError("Gemini model attempts failed.");
-};
-
-const getFallbackMessage = (error: unknown): string => {
-  if (error instanceof GeminiRequestError && error.status === 429) {
-    return "Gemini is rate-limited right now. Showing fallback cards; please retry in about a minute.";
+  const cards = parseGeminiCards(candidateText);
+  if (!cards) {
+    console.error("Failed to parse Gemini card JSON.", {
+      candidateText,
+      rawResponse
+    });
+    throw new Error("Could not parse Gemini flashcard JSON.");
   }
 
-  if (error instanceof GeminiRequestError && error.status === 503) {
-    return "Gemini is temporarily unavailable. Showing fallback cards for now.";
-  }
-
-  return "Gemini generation failed. Showing fallback cards instead.";
+  return cards;
 };
 
 export async function POST(req: Request) {
@@ -226,7 +156,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       cards: fallbackFromNotes(notes),
       fallback: true,
-      message: getFallbackMessage(error)
+      message: "Gemini generation failed. Showing fallback cards instead."
     });
   }
 }

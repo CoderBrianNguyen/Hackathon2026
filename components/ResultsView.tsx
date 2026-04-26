@@ -13,7 +13,7 @@ interface ResultsViewProps {
 export function ResultsView({ result, deck, onReviewMissed, onBackToDashboard }: ResultsViewProps) {
   const percentage = Math.round((result.correct / result.total) * 100);
   const cardById = new Map(deck.cards.map((card) => [card.id, card]));
-  const lowConfidenceCards = result.answers
+  const lowConfidenceCards = (result.answers ?? [])
     .filter((answer) => !answer.isCorrect || (answer.isCorrect && answer.confidence === 1))
     .map((answer) => cardById.get(answer.cardId))
     .filter((card): card is Deck["cards"][number] => Boolean(card))

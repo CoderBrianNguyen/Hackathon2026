@@ -6,16 +6,9 @@ import { FlashcardEditor } from "@/components/FlashcardEditor";
 import { QuizMode } from "@/components/QuizMode";
 import { ResultsView } from "@/components/ResultsView";
 import { EvaluateShortAnswersView } from "@/components/EvaluateShortAnswersView";
-import { AppView, Deck, QuizResult, StudyPlan, Subject } from "@/lib/types";
+import { AppView, Deck, QuizResult, ShortAnswerForEvaluation, StudyPlan, Subject } from "@/lib/types";
 import { loadAppData, saveAppData } from "@/lib/storage";
 import { DEFAULT_SUBJECT_COLOR, normalizeSubjectColor } from "@/lib/subjectColor";
-
-interface ShortAnswer {
-  cardId: string;
-  question: string;
-  studentAnswer: string;
-  expectedAnswer: string;
-}
 
 export default function HomePage() {
   const [isHydrated, setIsHydrated] = useState(false);
@@ -25,7 +18,7 @@ export default function HomePage() {
   const [activeDeckId, setActiveDeckId] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<AppView>("dashboard");
   const [latestResult, setLatestResult] = useState<QuizResult | null>(null);
-  const [shortAnswersForEvaluation, setShortAnswersForEvaluation] = useState<ShortAnswer[]>([]);
+  const [shortAnswersForEvaluation, setShortAnswersForEvaluation] = useState<ShortAnswerForEvaluation[]>([]);
 
   useEffect(() => {
     const localData = loadAppData();
@@ -129,9 +122,9 @@ export default function HomePage() {
       )
     );
 
-    // Check if there are short answers to evaluate
-    if ((result as any).shortAnswersForEvaluation && (result as any).shortAnswersForEvaluation.length > 0) {
-      setShortAnswersForEvaluation((result as any).shortAnswersForEvaluation);
+    // If there are deferred short answers, route to batch-evaluation first.
+    if (result.shortAnswersForEvaluation && result.shortAnswersForEvaluation.length > 0) {
+      setShortAnswersForEvaluation(result.shortAnswersForEvaluation);
       setActiveView("evaluate-short-answers");
     } else {
       setActiveView("results");
@@ -166,6 +159,26 @@ export default function HomePage() {
 
   const handleEvaluationComplete = (evaluatedResult: QuizResult) => {
     setLatestResult(evaluatedResult);
+    const score = Math.round((evaluatedResult.correct / evaluatedResult.total) * 100);
+    setDecks((prev) =>
+      prev.map((deck) =>
+        deck.id === evaluatedResult.deckId
+          ? {
+              ...deck,
+              lastScore: score,
+              attempts: (deck.attempts ?? []).map((attempt) =>
+                attempt.completedAt === evaluatedResult.completedAt
+                  ? {
+                      ...attempt,
+                      correct: evaluatedResult.correct,
+                      score
+                    }
+                  : attempt
+              )
+            }
+          : deck
+      )
+    );
     setShortAnswersForEvaluation([]);
     setActiveView("results");
   };
@@ -216,7 +229,6 @@ export default function HomePage() {
         <EvaluateShortAnswersView
           result={latestResult}
           shortAnswers={shortAnswersForEvaluation}
-          deck={activeDeck}
           onEvaluated={handleEvaluationComplete}
           onBackToDashboard={() => setActiveView("dashboard")}
         />
